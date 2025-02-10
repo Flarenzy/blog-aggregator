@@ -11,7 +11,6 @@ func main() {
 	if err != nil {
 		slog.Error("error reading config", "err", err)
 	}
-	fmt.Printf("DB url: %v\nUser: %v\n", c.DbUrl, c.CurrentUserName)
 	err = c.SetUser("Flarenzy")
 	if err != nil {
 		slog.Error("error setting user", "err", err)
