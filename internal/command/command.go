@@ -1,6 +1,7 @@
 package command
 
 import (
+	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
 	"log/slog"
 )
@@ -37,7 +38,10 @@ func (c *Commands) register(name string, f func(*State, Command) error) {
 }
 
 func (c *Commands) Run(s *State, cmd Command) error {
-	f := c.registered[cmd.Name]
+	f, ok := c.registered[cmd.Name]
+	if !ok {
+		return fmt.Errorf("command %s not found", cmd.Name)
+	}
 	err := f(s, cmd)
 	if err != nil {
 		return err
