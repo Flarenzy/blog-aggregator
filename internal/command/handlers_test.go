@@ -2,8 +2,12 @@ package command
 
 import (
 	"github.com/Flarenzy/blog-aggregator/internal/config"
+	"github.com/Flarenzy/blog-aggregator/internal/logging"
+	"log/slog"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 )
 
@@ -35,8 +39,24 @@ func tempConfig(t *testing.T) *config.Config {
 func TestLoginNotEnoughArgs(t *testing.T) {
 	t.Parallel()
 	c := tempConfig(t)
-	s := NewState(c)
-	err := handlerLogin(s, Command{
+	logger, f, err := logging.NewLogger("gator-temp1.log", slog.LevelDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(f)
+	defer func() {
+		err := os.Remove("gator-temp1.log")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	s := NewState(c, logger)
+	err = handlerLogin(s, Command{
 		"login",
 		[]string{},
 	})
@@ -49,8 +69,24 @@ func TestLoginNotEnoughArgs(t *testing.T) {
 func TestLoginEmptyUsername(t *testing.T) {
 	t.Parallel()
 	c := tempConfig(t)
-	s := NewState(c)
-	err := handlerLogin(s,
+	logger, f, err := logging.NewLogger("gator-temp2.log", slog.LevelDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(f)
+	defer func() {
+		err := os.Remove("gator-temp2.log")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	s := NewState(c, logger)
+	err = handlerLogin(s,
 		Command{
 			"login",
 			[]string{""},
@@ -66,16 +102,26 @@ func TestLoginInvalidUsername(t *testing.T) {
 	cases := []string{"Bob", "Frank", "John"}
 	for _, ca := range cases {
 		c := tempConfig(t)
-		s := NewState(c)
+		randNum := strconv.Itoa(rand.Int())
+		logger, f, err := logging.NewLogger("gator-temp"+randNum+".log", slog.LevelDebug)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		s := NewState(c, logger)
 		args := []string{ca}
-		err := handlerLogin(s,
+		err = handlerLogin(s,
 			Command{
 				"login",
 				args,
 			})
 		if err != nil && s.Config.CurrentUserName != ca {
 			t.Errorf("expected no error got: %v", err.Error())
+			f.Close()
+			os.Remove("gator-temp.log")
 			t.Fatal()
 		}
+		f.Close()
+		os.Remove(f.Name())
 	}
 }

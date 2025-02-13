@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
 	"log/slog"
+	"strings"
 )
 
 type Command struct {
@@ -13,10 +14,11 @@ type Command struct {
 
 type State struct {
 	Config *config.Config
+	Logger *slog.Logger
 }
 
-func NewState(c *config.Config) *State {
-	return &State{c}
+func NewState(c *config.Config, logger *slog.Logger) *State {
+	return &State{c, logger}
 }
 
 type Commands struct {
@@ -42,6 +44,7 @@ func (c *Commands) Run(s *State, cmd Command) error {
 	if !ok {
 		return fmt.Errorf("command %s not found", cmd.Name)
 	}
+	s.Logger.Debug("Running command", "name", cmd.Name, "args", strings.Join(cmd.Args, " "))
 	err := f(s, cmd)
 	if err != nil {
 		return err

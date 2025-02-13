@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/command"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
+	"github.com/Flarenzy/blog-aggregator/internal/logging"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -23,7 +24,19 @@ func main() {
 	if err != nil {
 		slog.Error("error reading config", "err", err)
 	}
-	s := command.NewState(&c)
+	logger, logFile, err := logging.NewLogger("gator.log", slog.LevelDebug)
+	if err != nil {
+		slog.Error("error creating logger", "err", err)
+		os.Exit(1)
+	}
+	defer func(logFile *os.File) {
+		err := logFile.Close()
+		if err != nil {
+			slog.Error("error closing log file", "err", err)
+			os.Exit(1)
+		}
+	}(logFile)
+	s := command.NewState(&c, logger)
 	cmds := command.NewCommands()
 	args := os.Args[1:]
 	fmt.Println(args)

@@ -3,6 +3,11 @@ package command
 import (
 	"errors"
 	"fmt"
+	"github.com/Flarenzy/blog-aggregator/internal/logging"
+	"log/slog"
+	"math/rand"
+	"os"
+	"strconv"
 	"testing"
 )
 
@@ -22,17 +27,18 @@ func TestNewCommands(t *testing.T) {
 			t.Errorf("command %s doesn't have know handler", k)
 			t.Fatal()
 		}
-		//if &f != &g {
-		//	t.Errorf("command %s has registered handler, expected func adr %v, got %v", k, &g, &f)
-		//	t.Fatal()
-		//}
 	}
 }
 
 func TestCommandsRun(t *testing.T) {
 	cmds := NewCommands()
 	c := tempConfig(t)
-	s := NewState(c)
+	randNum := strconv.Itoa(rand.Int())
+	logger, f, err := logging.NewLogger("gator-temp"+randNum+".log", slog.LevelDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := NewState(c, logger)
 	cases := []struct {
 		cmd     string
 		handler func(s *State, c Command) error
@@ -55,15 +61,24 @@ func TestCommandsRun(t *testing.T) {
 		}
 		if s.Config.CurrentUserName != ca.name {
 			t.Errorf("command %s expected %s got %s", ca.cmd, ca.name, s.Config.CurrentUserName)
+			f.Close()
+			os.Remove("gator-temp" + randNum + ".log")
 			t.Fatal()
 		}
 	}
+	f.Close()
+	os.Remove(f.Name())
 }
 
 func TestCommandsRunUnknownCommand(t *testing.T) {
 	cmds := NewCommands()
 	c := tempConfig(t)
-	s := NewState(c)
+	randNum := strconv.Itoa(rand.Int())
+	logger, f, err := logging.NewLogger("gator-temp"+randNum+".log", slog.LevelDebug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := NewState(c, logger)
 	cases := []struct {
 		cmd     string
 		handler func(s *State, c Command) error
@@ -84,7 +99,11 @@ func TestCommandsRunUnknownCommand(t *testing.T) {
 		expectedError := fmt.Sprintf("command %s not found", ca.cmd)
 		if err != nil && err.Error() != expectedError {
 			t.Errorf("command %s expected %s got %s", ca.cmd, expectedError, err.Error())
+			f.Close()
+			os.Remove("./gator-temp" + randNum + ".log")
 			t.Fatal()
 		}
 	}
+	f.Close()
+	os.Remove(f.Name())
 }
