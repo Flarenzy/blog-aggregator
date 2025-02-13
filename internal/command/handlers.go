@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/database"
 	"github.com/google/uuid"
 	"time"
@@ -57,6 +58,21 @@ func handlerReset(s *State, cmd Command) error {
 	err := s.Db.DeleteAllUsers(context.Background())
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func handlerUsers(s *State, _ Command) error {
+	users, err := s.Db.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		if user.Name == s.Config.CurrentUserName {
+			fmt.Printf("* %v (current)\n", user.Name)
+		} else {
+			fmt.Printf("* %v\n", user.Name)
+		}
 	}
 	return nil
 }
