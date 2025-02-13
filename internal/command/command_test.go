@@ -38,7 +38,7 @@ func TestCommandsRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := NewState(c, logger)
+	s := NewState(c, nil, logger)
 	cases := []struct {
 		cmd     string
 		handler func(s *State, c Command) error
@@ -78,7 +78,7 @@ func TestCommandsRunUnknownCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := NewState(c, logger)
+	s := NewState(c, nil, logger)
 	cases := []struct {
 		cmd     string
 		handler func(s *State, c Command) error

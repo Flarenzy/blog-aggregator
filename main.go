@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/command"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
+	"github.com/Flarenzy/blog-aggregator/internal/database"
 	"github.com/Flarenzy/blog-aggregator/internal/logging"
+	_ "github.com/lib/pq"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,12 +18,15 @@ import (
 func main() {
 
 	// Gracefully handle interrupt signals
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
 		os.Exit(0)
 	}()
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	c, err := config.Read("")
 	if err != nil {
 		slog.Error("error reading config", "err", err)
@@ -36,7 +43,9 @@ func main() {
 			os.Exit(1)
 		}
 	}(logFile)
-	s := command.NewState(&c, logger)
+	db, err := sql.Open("postgres", c.DbUrl)
+	dbQueries := database.New(db)
+	s := command.NewState(&c, dbQueries, logger)
 	cmds := command.NewCommands()
 	args := os.Args[1:]
 	fmt.Println(args)

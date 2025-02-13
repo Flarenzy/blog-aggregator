@@ -55,7 +55,7 @@ func TestLoginNotEnoughArgs(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	s := NewState(c, logger)
+	s := NewState(c, nil, logger)
 	err = handlerLogin(s, Command{
 		"login",
 		[]string{},
@@ -85,7 +85,7 @@ func TestLoginEmptyUsername(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	s := NewState(c, logger)
+	s := NewState(c, nil, logger)
 	err = handlerLogin(s,
 		Command{
 			"login",
@@ -108,7 +108,7 @@ func TestLoginInvalidUsername(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		s := NewState(c, logger)
+		s := NewState(c, nil, logger)
 		args := []string{ca}
 		err = handlerLogin(s,
 			Command{

@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
+	"github.com/Flarenzy/blog-aggregator/internal/database"
 	"log/slog"
 	"strings"
 )
@@ -14,11 +15,12 @@ type Command struct {
 
 type State struct {
 	Config *config.Config
+	Db     *database.Queries
 	Logger *slog.Logger
 }
 
-func NewState(c *config.Config, logger *slog.Logger) *State {
-	return &State{c, logger}
+func NewState(c *config.Config, db *database.Queries, logger *slog.Logger) *State {
+	return &State{c, db, logger}
 }
 
 type Commands struct {
@@ -28,6 +30,7 @@ type Commands struct {
 func NewCommands() *Commands {
 	cmds := &Commands{make(map[string]func(*State, Command) error)}
 	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerRegister)
 	return cmds
 }
 
