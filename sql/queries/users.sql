@@ -14,4 +14,5 @@ WHERE name = $1;
 
 
 -- name: DeleteAllUsers :exec
-DELETE FROM users;
+DELETE
+FROM users;
