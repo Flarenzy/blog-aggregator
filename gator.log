@@ -20,3 +20,12 @@
 {"time":"2025-02-13T11:37:57.035348+01:00","level":"INFO","msg":"user has been created with params","Name":"holgith","ID":"a7b73278-d7c5-4188-93f4-a6e07faa76ea","CreateAt":"2025-02-13T11:37:57.024505+01:00","UpdatedAt":"2025-02-13T11:37:57.024505+01:00"}
 {"time":"2025-02-13T11:37:57.687532+01:00","level":"DEBUG","msg":"Running command","name":"login","args":"kahya"}
 {"time":"2025-02-13T11:37:58.329483+01:00","level":"DEBUG","msg":"Running command","name":"login","args":"unknown"}
+{"time":"2025-02-13T11:58:46.800076+01:00","level":"DEBUG","msg":"Running command","name":"reset","args":""}
+{"time":"2025-02-13T11:59:12.907535+01:00","level":"DEBUG","msg":"Running command","name":"reset","args":""}
+{"time":"2025-02-13T11:59:13.533524+01:00","level":"DEBUG","msg":"Running command","name":"register","args":"kahya"}
+{"time":"2025-02-13T11:59:13.545896+01:00","level":"INFO","msg":"user has been created with params","Name":"kahya","ID":"a134db07-1eac-48cc-bd05-82db5601103a","CreateAt":"2025-02-13T11:59:13.533697+01:00","UpdatedAt":"2025-02-13T11:59:13.533697+01:00"}
+{"time":"2025-02-13T11:59:14.156428+01:00","level":"DEBUG","msg":"Running command","name":"register","args":"kahya"}
+{"time":"2025-02-13T11:59:14.7912+01:00","level":"DEBUG","msg":"Running command","name":"reset","args":""}
+{"time":"2025-02-13T11:59:15.443004+01:00","level":"DEBUG","msg":"Running command","name":"register","args":"kahya"}
+{"time":"2025-02-13T11:59:15.455649+01:00","level":"INFO","msg":"user has been created with params","Name":"kahya","ID":"62d6adfc-e474-4e48-a384-99b939530e6c","CreateAt":"2025-02-13T11:59:15.44316+01:00","UpdatedAt":"2025-02-13T11:59:15.44316+01:00"}
+{"time":"2025-02-13T11:59:24.985455+01:00","level":"DEBUG","msg":"Running command","name":"reset","args":""}

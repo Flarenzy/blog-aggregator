@@ -52,3 +52,11 @@ func handlerRegister(s *State, cmd Command) error {
 		"UpdatedAt", userParams.UpdatedAt)
 	return nil
 }
+
+func handlerReset(s *State, cmd Command) error {
+	err := s.Db.DeleteAllUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
+}
