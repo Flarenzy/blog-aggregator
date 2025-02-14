@@ -103,6 +103,7 @@ func handlerAddFeed(s *State, cmd Command) error {
 	url := cmd.Args[1]
 	var feedParams database.CreateFeedParams
 	curTime := time.Now()
+	feedParams.ID = uuid.New()
 	feedParams.Name = name
 	feedParams.Url = url
 	feedParams.UpdatedAt = curTime
