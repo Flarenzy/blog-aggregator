@@ -40,6 +40,7 @@ func NewCommands() *Commands {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUsers)
 	cmds.register("agg", handlerAgg)
+	cmds.register("addfeed", handlerAddFeed)
 	return cmds
 }
 

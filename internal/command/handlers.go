@@ -77,7 +77,7 @@ func handlerUsers(s *State, _ Command) error {
 	return nil
 }
 
-func handlerAgg(s *State, cmd Command) error {
+func handlerAgg(_ *State, _ Command) error {
 	rss, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	if err != nil {
 		return err
@@ -87,5 +87,32 @@ func handlerAgg(s *State, cmd Command) error {
 		return err
 	}
 	fmt.Println(xml)
+	return nil
+}
+
+func handlerAddFeed(s *State, cmd Command) error {
+	if len(cmd.Args) < 2 {
+		return errors.New("the add feed handler expects at least two arguments: name and url")
+	}
+	name := cmd.Args[0]
+	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		s.Logger.Info("user not found", "name", name)
+		return nil
+	}
+	url := cmd.Args[1]
+	var feedParams database.CreateFeedParams
+	curTime := time.Now()
+	feedParams.Name = name
+	feedParams.Url = url
+	feedParams.UpdatedAt = curTime
+	feedParams.CreatedAt = curTime
+	feedParams.UserID = user.ID
+	_, err = s.Db.CreateFeed(context.Background(), feedParams)
+	if err != nil {
+		s.Logger.Error("failed to create feed", "url", url, "err", err)
+		return err
+	}
+	s.Logger.Info("successfully added feed to user", "url", url, "name", user.Name)
 	return nil
 }
