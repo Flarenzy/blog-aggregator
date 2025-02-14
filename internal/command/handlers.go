@@ -76,3 +76,16 @@ func handlerUsers(s *State, _ Command) error {
 	}
 	return nil
 }
+
+func handlerAgg(s *State, cmd Command) error {
+	rss, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+	xml, err := unescapeXML(rss)
+	if err != nil {
+		return err
+	}
+	fmt.Println(xml)
+	return nil
+}
