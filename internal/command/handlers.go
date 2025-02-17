@@ -117,3 +117,15 @@ func handlerAddFeed(s *State, cmd Command) error {
 	s.Logger.Info("successfully added feed to user", "url", url, "name", user.Name)
 	return nil
 }
+
+func handlerFeeds(s *State, _ Command) error {
+	allFeeds, err := s.Db.GetAllFeeds(context.Background())
+	if err != nil {
+		s.Logger.Error("failed to get all feeds", "err", err)
+		return err
+	}
+	for _, feed := range allFeeds {
+		fmt.Printf("* name: %v url: %v added_by: %v\n", feed.Name, feed.Url, feed.Name_2)
+	}
+	return nil
+}

@@ -41,6 +41,7 @@ func NewCommands() *Commands {
 	cmds.register("users", handlerUsers)
 	cmds.register("agg", handlerAgg)
 	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("feeds", handlerFeeds)
 	return cmds
 }
 
@@ -48,7 +49,7 @@ func (c *Commands) register(name string, f func(*State, Command) error) {
 	_, ok := c.registered[name]
 	if !ok {
 		c.registered[name] = f
-		slog.Info("registering command", "name", name)
+		slog.Debug("registering command", "name", name)
 	}
 }
 
