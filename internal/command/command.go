@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
@@ -12,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Command struct {
@@ -40,8 +42,11 @@ func NewCommands() *Commands {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUsers)
 	cmds.register("agg", handlerAgg)
-	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerFeeds)
+	cmds.register("follow", middlewareLoggedIn(handlerFollow))
+	cmds.register("following", middlewareLoggedIn(handlerFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 	return cmds
 }
 
@@ -97,4 +102,36 @@ func unescapeXML(rss *rss.RSSFeed) (*rss.RSSFeed, error) {
 		rss.Channel.Item[i].Description = html.UnescapeString(entry.Description)
 	}
 	return rss, nil
+}
+
+func scrapeFeeds(s *State) {
+	for {
+		nextFeed, err := s.Db.GetNextFeedToFetch(context.Background())
+		if err != nil {
+			s.Logger.Info("No more feeds to fetch", "error", err)
+			break
+		}
+		feed, err := fetchFeed(context.Background(), nextFeed.Url)
+		var markFeedFetched database.MarkFeedFetchedParams
+		markFeedFetched.UpdatedAt = time.Now()
+		markFeedFetched.LastFetchedAt = sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		}
+		markFeedFetched.ID = nextFeed.ID
+
+		err = s.Db.MarkFeedFetched(context.Background(), markFeedFetched)
+		if err != nil {
+			s.Logger.Error("Error marking feed as fetched", "error", err, "id", nextFeed.ID)
+			continue
+		}
+		unescapedFeed, err := unescapeXML(feed)
+		if err != nil {
+			s.Logger.Error("Error unescaping feed", "error", err, "id", nextFeed.ID)
+			continue
+		}
+		for _, item := range unescapedFeed.Channel.Item {
+			fmt.Printf("Title %s\n", item.Title)
+		}
+	}
 }

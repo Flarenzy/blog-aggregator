@@ -77,29 +77,27 @@ func handlerUsers(s *State, _ Command) error {
 	return nil
 }
 
-func handlerAgg(_ *State, _ Command) error {
-	rss, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+func handlerAgg(s *State, cmd Command) error {
+	if len(cmd.Args) <= 0 {
+		s.Logger.Error("command expects the time between requests", "cmd", cmd.Name, "args", cmd.Args)
+		return errors.New("the aggregate handler expects a single argument, the time between requests")
+	}
+	timeBetweenRequests, err := time.ParseDuration(cmd.Args[0])
 	if err != nil {
+		s.Logger.Error("command expects the time between requests", "cmd", cmd.Name, "args", cmd.Args)
 		return err
 	}
-	xml, err := unescapeXML(rss)
-	if err != nil {
-		return err
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
 	}
-	fmt.Println(xml)
-	return nil
 }
 
-func handlerAddFeed(s *State, cmd Command) error {
+func handlerAddFeed(s *State, cmd Command, user database.User) error {
 	if len(cmd.Args) < 2 {
 		return errors.New("the add feed handler expects at least two arguments: name and url")
 	}
 	name := cmd.Args[0]
-	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
-	if err != nil {
-		s.Logger.Info("user not found", "name", name)
-		return nil
-	}
 	url := cmd.Args[1]
 	var feedParams database.CreateFeedParams
 	curTime := time.Now()
@@ -109,9 +107,26 @@ func handlerAddFeed(s *State, cmd Command) error {
 	feedParams.UpdatedAt = curTime
 	feedParams.CreatedAt = curTime
 	feedParams.UserID = user.ID
-	_, err = s.Db.CreateFeed(context.Background(), feedParams)
+	_, err := s.Db.CreateFeed(context.Background(), feedParams)
 	if err != nil {
 		s.Logger.Error("failed to create feed", "url", url, "err", err)
+		return err
+	}
+	s.Logger.Info("successfully added feed to user", "url", url, "name", user.Name)
+	urlFeed, err := s.Db.GetFeedByUrl(context.Background(), url)
+	if err != nil {
+		s.Logger.Error("failed to get feed by url", "url", url, "err", err)
+		return errors.New("failed to get feed by url")
+	}
+	var createFeedParams database.CreateFeedFollowParams
+	createFeedParams.ID = uuid.New()
+	createFeedParams.CreatedAt = curTime
+	createFeedParams.UpdatedAt = curTime
+	createFeedParams.UserID = user.ID
+	createFeedParams.FeedID = urlFeed.ID
+	_, err = s.Db.CreateFeedFollow(context.Background(), createFeedParams)
+	if err != nil {
+		s.Logger.Error("failed to create feed follow", "url", url, "err", err)
 		return err
 	}
 	s.Logger.Info("successfully added feed to user", "url", url, "name", user.Name)
@@ -127,5 +142,72 @@ func handlerFeeds(s *State, _ Command) error {
 	for _, feed := range allFeeds {
 		fmt.Printf("* name: %v url: %v added_by: %v\n", feed.Name, feed.Url, feed.Name_2)
 	}
+	return nil
+}
+
+func handlerFollow(s *State, cmd Command, user database.User) error {
+	if len(cmd.Args) < 1 {
+		return errors.New("the add feed handler expects at least one argument the url")
+	}
+	url := cmd.Args[0]
+	urlFeed, err := s.Db.GetFeedByUrl(context.Background(), url)
+	if err != nil {
+		s.Logger.Error("failed to get feed by url", "url", url, "err", err)
+		return errors.New("failed to get feed by url")
+	}
+	var createFeedParams database.CreateFeedFollowParams
+	curTime := time.Now()
+	createFeedParams.ID = uuid.New()
+	createFeedParams.CreatedAt = curTime
+	createFeedParams.UpdatedAt = curTime
+	createFeedParams.UserID = user.ID
+	createFeedParams.FeedID = urlFeed.ID
+	res, err := s.Db.CreateFeedFollow(context.Background(), createFeedParams)
+	if err != nil {
+		s.Logger.Error("failed to create feed follow", "url", url, "err", err)
+		return err
+	}
+	s.Logger.Info("successfully added feed to user", "url", url, "name", user.Name)
+	fmt.Printf("The name of the feed: %v, the username: %v", res[0].FeedName, res[0].UserName)
+	return nil
+}
+
+func handlerFollowing(s *State, _ Command, user database.User) error {
+	var res []database.GetFeedFollowsForUserRow
+	res, err := s.Db.GetFeedFollowsForUser(context.Background(), user.Name)
+	if err != nil {
+		s.Logger.Error("failed to get feed follows", "err", err)
+		return err
+	}
+	if len(res) == 0 {
+		s.Logger.Info("no feed follows found for user", "user", user.Name)
+		return nil
+	}
+	fmt.Printf("for the user: %v\n", res[0].Username)
+	for _, user := range res {
+		fmt.Printf("- %v\n", user.FeedName)
+	}
+	return nil
+}
+
+func handlerUnfollow(s *State, cmd Command, user database.User) error {
+	if len(cmd.Args) < 1 {
+		s.Logger.Error("the add feed handler expects at least one argument the url", "cmd", cmd.Name)
+		return errors.New("the unfollow handler expects at least one argument the url")
+	}
+	feed, err := s.Db.GetFeedByUrl(context.Background(), cmd.Args[0])
+	if err != nil {
+		s.Logger.Error("failed to get feed by url", "url", cmd.Args[0], "err", err)
+		return errors.New("failed to get feed by url")
+	}
+	var deleteUserParams database.DeleteUserAndFeedParams
+	deleteUserParams.UserID = user.ID
+	deleteUserParams.FeedID = feed.ID
+	err = s.Db.DeleteUserAndFeed(context.Background(), deleteUserParams)
+	if err != nil {
+		s.Logger.Error("failed to delete user and feed", "err", err)
+		return err
+	}
+	s.Logger.Info("successfully unfollowed feed for user", "url", feed.Url, "name", user.Name)
 	return nil
 }

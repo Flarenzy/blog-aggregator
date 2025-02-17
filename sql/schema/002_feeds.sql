@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE feeds (
+CREATE TABLE IF NOT EXISTS feeds (
     id uuid primary key,
     created_at timestamp not null,
     updated_at timestamp not null,
