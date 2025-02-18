@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/database"
 	"github.com/google/uuid"
+	"strconv"
 	"time"
 )
 
@@ -211,5 +212,38 @@ func handlerUnfollow(s *State, cmd Command, user database.User) error {
 		return err
 	}
 	s.Logger.Info("successfully unfollowed feed for user", "url", feed.Url, "name", user.Name)
+	return nil
+}
+
+func handlerBrowse(s *State, cmd Command, user database.User) error {
+	numOfPosts := 2
+	if len(cmd.Args) >= 1 {
+		var err error
+		numOfPosts, err = strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			s.Logger.Error("failed to parse number of posts", "err", err)
+			return errors.New("failed to parse number of posts")
+		}
+		if numOfPosts > 100 {
+			s.Logger.Error("too many posts to browse")
+			return errors.New("too many posts to browse")
+		}
+	}
+	var getPostsForUserParams database.GetPostsForUserParams
+	getPostsForUserParams.ID = user.ID
+	getPostsForUserParams.Limit = int32(numOfPosts)
+	postsForUser, err := s.Db.GetPostsForUser(context.Background(), getPostsForUserParams)
+	if err != nil {
+		s.Logger.Error("failed to get posts for user", "err", err, "user", user.Name)
+		return err
+	}
+	for _, post := range postsForUser {
+		fmt.Println("-----------------------------------------")
+		fmt.Printf("%v\n", post.Title)
+		fmt.Printf("%v\n", post.Url)
+		fmt.Printf("%v\n", post.Description)
+		fmt.Println("-----------------------------------------")
+	}
+	fmt.Println("browse handler finished")
 	return nil
 }

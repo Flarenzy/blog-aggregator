@@ -9,6 +9,7 @@ import (
 	"github.com/Flarenzy/blog-aggregator/internal/config"
 	"github.com/Flarenzy/blog-aggregator/internal/database"
 	"github.com/Flarenzy/blog-aggregator/internal/rss"
+	"github.com/google/uuid"
 	"html"
 	"io"
 	"log/slog"
@@ -48,6 +49,7 @@ func NewCommands() *Commands {
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", middlewareLoggedIn(handlerFollowing))
 	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	cmds.register("browse", middlewareLoggedIn(handlerBrowse))
 	return cmds
 }
 
@@ -109,6 +111,7 @@ func unescapeXML(rss *rss.RSSFeed) (*rss.RSSFeed, error) {
 }
 
 func scrapeFeeds(s *State) {
+	s.Logger.Debug("scraping feeds")
 	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
 	if err != nil {
 		s.Logger.Error("Error getting user", "error", err)
@@ -129,7 +132,6 @@ func scrapeFeeds(s *State) {
 		s.Logger.Info("nil feed", "url", nextFeed.Url)
 		return
 	}
-	fmt.Printf("Feed  %v\n", feed.Channel.Title)
 	var markFeedFetched database.MarkFeedFetchedParams
 	markFeedFetched.UpdatedAt = time.Now()
 	markFeedFetched.LastFetchedAt = sql.NullTime{
@@ -143,7 +145,6 @@ func scrapeFeeds(s *State) {
 		s.Logger.Error("Error marking feed as fetched", "error", err, "id", nextFeed.ID)
 		return
 	}
-	fmt.Printf("Marking feed %v\n", nextFeed.Url)
 	unescapedFeed, err := unescapeXML(feed)
 	if err != nil {
 		s.Logger.Error("Error unescaping feed", "error", err, "id", nextFeed.ID)
@@ -157,11 +158,34 @@ func scrapeFeeds(s *State) {
 		if item.Title == "" {
 			continue
 		}
-		fmt.Println("---------------------------------")
-		fmt.Println(nextFeed.Name)
-		fmt.Printf("Title: %s\n", item.Title)
-		fmt.Printf("Description: %s\n", item.Description)
-		fmt.Println("---------------------------------")
+		var createPostParams database.CreatePostParams
+		createPostParams.ID = uuid.New()
+		createPostParams.CreatedAt = time.Now()
+		createPostParams.UpdatedAt = createPostParams.CreatedAt
+		parsedDate, err := time.Parse("Mon, 02 Jan 2006 15:04:05 -0700", item.PubDate)
+		if err != nil {
+			s.Logger.Error("Error parsing date format", "error", err, "date", item.PubDate)
+			continue
+		}
+		createPostParams.PublishedAt = parsedDate
+		createPostParams.FeedID = nextFeed.ID
+		createPostParams.Url = item.Link
+		createPostParams.Title = item.Title
+		var nulDescription sql.NullString
+		if item.Description != "" {
+			nulDescription.Valid = true
+			nulDescription.String = item.Description
+		} else {
+			nulDescription.Valid = false
+			nulDescription.String = ""
+		}
+		createPostParams.Description = nulDescription
+		_, err = s.Db.CreatePost(context.Background(), createPostParams)
+		if err != nil {
+			s.Logger.Error("Error creating post", "error", err, "id", nextFeed.ID, "url", item.Link)
+			continue
+		}
+		s.Logger.Info("Created post", "Title", item.Title, "url", item.Link)
 	}
 
 }
