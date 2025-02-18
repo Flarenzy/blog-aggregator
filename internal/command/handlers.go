@@ -88,7 +88,9 @@ func handlerAgg(s *State, cmd Command) error {
 		return err
 	}
 	ticker := time.NewTicker(timeBetweenRequests)
+	fmt.Printf("Collecting feeds every %v \n", cmd.Args[0])
 	for ; ; <-ticker.C {
+		fmt.Printf("Fetching all feeds for users %v\n", s.Config.CurrentUserName)
 		scrapeFeeds(s)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"github.com/Flarenzy/blog-aggregator/internal/config"
 	"github.com/Flarenzy/blog-aggregator/internal/database"
@@ -95,6 +96,9 @@ func fetchFeed(ctx context.Context, feedUrl string) (*rss.RSSFeed, error) {
 }
 
 func unescapeXML(rss *rss.RSSFeed) (*rss.RSSFeed, error) {
+	if rss == nil {
+		return nil, errors.New("nil rss feed")
+	}
 	rss.Channel.Title = html.UnescapeString(rss.Channel.Title)
 	rss.Channel.Description = html.UnescapeString(rss.Channel.Description)
 	for i, entry := range rss.Channel.Item {
@@ -105,33 +109,59 @@ func unescapeXML(rss *rss.RSSFeed) (*rss.RSSFeed, error) {
 }
 
 func scrapeFeeds(s *State) {
-	for {
-		nextFeed, err := s.Db.GetNextFeedToFetch(context.Background())
-		if err != nil {
-			s.Logger.Info("No more feeds to fetch", "error", err)
-			break
-		}
-		feed, err := fetchFeed(context.Background(), nextFeed.Url)
-		var markFeedFetched database.MarkFeedFetchedParams
-		markFeedFetched.UpdatedAt = time.Now()
-		markFeedFetched.LastFetchedAt = sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		}
-		markFeedFetched.ID = nextFeed.ID
-
-		err = s.Db.MarkFeedFetched(context.Background(), markFeedFetched)
-		if err != nil {
-			s.Logger.Error("Error marking feed as fetched", "error", err, "id", nextFeed.ID)
-			continue
-		}
-		unescapedFeed, err := unescapeXML(feed)
-		if err != nil {
-			s.Logger.Error("Error unescaping feed", "error", err, "id", nextFeed.ID)
-			continue
-		}
-		for _, item := range unescapedFeed.Channel.Item {
-			fmt.Printf("Title %s\n", item.Title)
-		}
+	user, err := s.Db.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		s.Logger.Error("Error getting user", "error", err)
+		return
 	}
+
+	nextFeed, err := s.Db.GetNextFeedToFetch(context.Background(), user.ID)
+	if err != nil {
+		s.Logger.Info("No more feeds to fetch", "error", err)
+		return
+	}
+	feed, err := fetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		s.Logger.Info("Error fetching feed", "error", err, "url", nextFeed.Url)
+		return
+	}
+	if feed == nil {
+		s.Logger.Info("nil feed", "url", nextFeed.Url)
+		return
+	}
+	fmt.Printf("Feed  %v\n", feed.Channel.Title)
+	var markFeedFetched database.MarkFeedFetchedParams
+	markFeedFetched.UpdatedAt = time.Now()
+	markFeedFetched.LastFetchedAt = sql.NullTime{
+		Time:  markFeedFetched.UpdatedAt,
+		Valid: true,
+	}
+	markFeedFetched.ID = nextFeed.ID
+
+	err = s.Db.MarkFeedFetched(context.Background(), markFeedFetched)
+	if err != nil {
+		s.Logger.Error("Error marking feed as fetched", "error", err, "id", nextFeed.ID)
+		return
+	}
+	fmt.Printf("Marking feed %v\n", nextFeed.Url)
+	unescapedFeed, err := unescapeXML(feed)
+	if err != nil {
+		s.Logger.Error("Error unescaping feed", "error", err, "id", nextFeed.ID)
+		return
+	}
+	if unescapedFeed == nil {
+		s.Logger.Error("Error got nil pointer unescapedFeed", "error", err, "id", nextFeed.ID)
+		return
+	}
+	for _, item := range unescapedFeed.Channel.Item {
+		if item.Title == "" {
+			continue
+		}
+		fmt.Println("---------------------------------")
+		fmt.Println(nextFeed.Name)
+		fmt.Printf("Title: %s\n", item.Title)
+		fmt.Printf("Description: %s\n", item.Description)
+		fmt.Println("---------------------------------")
+	}
+
 }

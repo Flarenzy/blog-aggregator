@@ -44,3 +44,11 @@ INNER JOIN feeds
 DELETE
 FROM feed_follows
 WHERE user_id = $1 AND feed_id = $2;
+
+-- name: GetNextFeedToFetch :one
+SELECT feeds.*
+FROM feed_follows
+INNER JOIN users ON feed_follows.user_id = $1
+INNER JOIN feeds ON feed_follows.feed_id = feeds.id
+ORDER BY last_fetched_at NULLS FIRST
+LIMIT 1;
